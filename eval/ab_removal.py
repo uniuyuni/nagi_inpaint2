@@ -9,7 +9,7 @@ v1 は「簡易 LPIPS で 13% 劣位＝接近している」と判断し、人�
 
 **したがって合否は人手の盲検A/Bだけで決める。**
 
-無作為化・二項検定・Wilson 区間は `eval/ab_compare.py` の実装をそのまま使う
+無作為化・二項検定・Wilson 区間は `eval/ab_stats.py` の実装をそのまま使う
 (`assign_sides` は 5 seed で偏りが無いことを `tests/test_ab.py` が実測済み)。
 
 **判定の観点** (ユーザ指示 2026-08-20):
@@ -54,7 +54,7 @@ from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from eval.ab_compare import assign_sides, tally                   # noqa: E402
+from eval.ab_stats import assign_sides, tally                     # noqa: E402
 
 
 def p(*a):
