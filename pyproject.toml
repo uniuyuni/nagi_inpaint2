@@ -1,0 +1,101 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nagi-inpaint2"
+version = "0.1.0"
+description = "Non-parametric-first inpainting for 100-megapixel linear HDR, trainable on an M1."
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "numpy>=1.24",
+  "scipy>=1.11",      # Stage D の勾配ドメイン合成 (疎行列ソルバ)
+  # torch 2.13.0 には MPS の性能回帰があり、Stage B の密コストボリュームが
+  # 2.12.0 比で 4.3倍遅くなる (139M -> 33M eval/s)。要求に対する余裕が
+  # 5.4倍から 1.35倍まで縮み、設計の前提が崩れる。§10.1 / §10.2 参照。
+  # 上限を外す際は必ず probes/p2b_costvolume.py を再実行して確認すること。
+  "torch>=2.12,<2.13",
+  "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+fastio = ["pyvips>=2.2"]
+test = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["osx-arm64"]
+
+[tool.pixi.system-requirements]
+# torch 2.12+ の arm64 wheel は macosx_14_0 タグ。既定の 11.0 のままだと解決に失敗する。
+# 実機は macOS 15.7.7。
+macos = "14.0"
+
+[tool.pixi.dependencies]
+python = "3.11.*"
+libvips = "*"
+pyvips = "*"
+exiftool = "*"
+zstandard = "*"          # タイル shard の圧縮 (§6.4)
+# external/libraw_enhanced の _core.so が @rpath で参照する
+# (@loader_path/../../../.pixi/envs/default/lib -> 本 env の lib)
+llvm-openmp = "*"
+
+[tool.pixi.pypi-dependencies]
+"nagi-inpaint2" = { path = ".", editable = true }
+pytest = ">=8.0"
+tqdm = ">=4.66"
+# external/MobileSAM (Apache-2.0) の依存。マスク辞書生成にのみ使う (§6.5)
+timm = ">=0.9"
+torchvision = "*"
+opencv-python-headless = "*"   # MobileSAM の SamAutomaticMaskGenerator が cv2 を使う
+
+# --- 既存の除去モデル (v2 Phase 0) ------------------------------------------
+# transformers は **5 未満に固定する**。無制限だと 5.x に上がり、
+# diffusers 0.40 が前提としていない API (CLIPTextModel 周り) で壊れる恐れがある。
+# torch 2.12 のピンは維持されることを pixi の solve で確認済み (docs/DESIGN_V2_JA.md §13.5)。
+diffusers = ">=0.35,<0.41"
+transformers = ">=4.44,<5"
+accelerate = "*"
+huggingface_hub = "*"
+
+# --- libraw_enhanced は external/ にベンダリングしてある -----------------------
+# ShadeWave/external/libraw_enhanced (commit 3bb0eb1) からの単純コピー。
+# LibRaw 本体も third_party/libraw-install に同梱しているため、
+# ShadeWave にも Homebrew にも /usr/local にも依存しない。
+#
+# pip install はしない。ビルド済みの _core.cpython-311-darwin.so をそのまま使い、
+# PYTHONPATH で読ませる。editable install は .so をソースツリー内に作り直すため、
+# ビルド環境が変わると壊れる。
+#
+# .so の @rpath は以下の順で解決される (いずれもコピー先で成立する相対パス):
+#   @loader_path/../third_party/libraw-install/lib  -> 同梱 LibRaw
+#   @loader_path/../../../.pixi/envs/default/lib    -> 本 env の libomp / libc++
+#
+# Metal シェーダは cwd 相対で探索されるため、リポジトリ直下の `metal` シンボリックリンク
+# (-> external/libraw_enhanced/core/metal) が必須。
+# 無いと黙って CPU にフォールバックし 2.3倍遅くなる (§10.1)。
+
+[tool.pixi.activation.env]
+PYTHONPATH = "$PIXI_PROJECT_ROOT/external/libraw_enhanced"
+
+[tool.pixi.tasks]
+check-mps = "python -c \"import torch; print('torch', torch.__version__, 'mps', torch.backends.mps.is_available())\""
+check-lre = "python -c \"import libraw_enhanced as l; print('libraw_enhanced', l.__file__)\""
+check-metal = "test -d metal && echo \"metal -> $(readlink metal)\" && ls metal/*.metal | wc -l"
+probe-fft = "python -u probes/p1_mps_fft.py"
+probe-gather = "python -u probes/p2_mps_gather.py"
+probe-costvolume = "python -u probes/p2b_costvolume.py"
+probe-warp = "python -u probes/p2c_warp.py"
+probe-train = "python -u probes/p3_train_step.py"
+probe-arch = "python -u probes/p3b_arch_sweep.py"
+probe-io = "python -u probes/p4_vips_io.py"
+probe-decode = "python -u probes/p5_raw_decode.py"
+test = "python -m pytest -q"
+
+[tool.setuptools.packages.find]
+include = ["nagi_inpaint2*"]

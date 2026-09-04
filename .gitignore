@@ -1,0 +1,29 @@
+# 巨大な生成物 — git に入れない (誤って `git add -A` すると数百GBを巻き込む)
+shards/
+cache/
+checkpoints/
+models/
+out/
+probes/
+external/
+data/raw/
+eval/dumps/
+*.npz
+*.pt
+*.tar
+*.zst
+
+# 環境
+.pixi/
+*.egg-info/
+__pycache__/
+*.pyc
+.DS_Store
+
+# 実行ログ (再現には要らない。結論は eval/RESULTS.md に書く)
+logs/
+
+# 開発環境のみのもの
+.pytest_cache/
+.claude/settings.local.json
+metal
