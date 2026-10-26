@@ -1973,8 +1973,8 @@ packages:
   - pytest>=4.6 ; extra == 'tests'
 - pypi: ./
   name: nagi-inpaint2
-  version: 0.1.0
-  sha256: 45cbd87547e0d699ab80be825e017102f530d9a5fdd88f8aaa02e0f7ef0b1c1e
+  version: 0.1.1
+  sha256: 7be953c23dd02279157958116ed0d83c29370669207461a2223ed9333dcbfb98
   requires_dist:
   - numpy>=1.24
   - scipy>=1.11
