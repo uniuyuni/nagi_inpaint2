@@ -23,16 +23,27 @@ def models_dir() -> str:
 
 
 def resolve(path: str) -> str:
-    """相対パスをリポジトリ (または `$NAGI_INPAINT2_MODELS`) 基準にする。
+    """相対パスを解決する。優先順位:
 
-    **既にある場所を壊さない**: 作業ディレクトリからの相対で実在するなら、
-    そちらを優先する (リポジトリ内で動かす従来の使い方をそのまま維持)。
+      1. 絶対パスはそのまま
+      2. **`$NAGI_INPAINT2_MODELS` が設定されていれば `models/...` はそこだけを見る。**
+         見つからなくても他を探さない (別の場所の重みを黙って使わないため)
+      3. 作業ディレクトリからの相対で実在するもの (リポジトリ内で動かす従来の使い方)
+      4. このパッケージの親 (リポジトリ直下) 基準
+
+    **初版の欠陥 (2026-10-26)**: 3 を 2 より先に見ていたため、作業ディレクトリに
+    `models/` があると、明示した `$NAGI_INPAINT2_MODELS` が無視されていた。
     """
-    if os.path.isabs(path) or os.path.exists(path):
+    if os.path.isabs(path):
         return path
-    if path.startswith("models" + os.sep) or path.startswith("models/"):
-        cand = os.path.join(models_dir(), path.split("/", 1)[1]
-                            if "/" in path else path[len("models"):].lstrip(os.sep))
+    is_model = path.startswith("models/") or path.startswith("models" + os.sep)
+    rel = path.split("/", 1)[1] if "/" in path else path[len("models"):].lstrip(os.sep)
+    if is_model and os.environ.get(ENV):
+        return os.path.join(os.environ[ENV], rel)
+    if os.path.exists(path):
+        return path
+    if is_model:
+        cand = os.path.join(models_dir(), rel)
         if os.path.exists(cand):
             return cand
     cand = os.path.join(ROOT, path)

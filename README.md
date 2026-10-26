@@ -49,20 +49,28 @@ for name, (y, x, patch) in api.predict_candidates(pipe, image, mask, bbox).items
 
 ## 重み
 
-`models/` に置く。`$NAGI_INPAINT2_MODELS` で場所を変えられる。**リポジトリには含まれない。**
+**リポジトリには含まれない。** 14 ファイル・4.47GB。一覧と sha256 は `nagi_inpaint2/assets.py`。
+
+```bash
+python -m nagi_inpaint2.fetch --dest models            # 取得して sha256 で検証
+python -m nagi_inpaint2.fetch --dest models --check    # 揃っているかだけ見る
+```
+
+置き場所は既定でリポジトリの `models/`。`$NAGI_INPAINT2_MODELS` を設定すると
+**そこだけを見る** (見つからなくても他を探さない)。
+
+### ShadeWave から使う場合
+
+`external/nagi_inpaint2` に clone され、重みは `checkpoints/nagi_inpaint2/` に置かれる
+(どちらも ShadeWave の `setup.sh` が行う)。ShadeWave 側の `helpers/nagi_inpaint2_helper.py` が
+`$NAGI_INPAINT2_MODELS` を設定してから import する。
 
 | 置き場所 | 中身 | ライセンス |
 |---|---|---|
 | `models/big-lama.pt` | LaMa (196MB) | Apache-2.0 |
 | `models/yoeo/yoeo.pth` | YOEO の UNet 重み (3.2GB) | Apache-2.0 |
-| `models/sd15-inpaint/` | SD1.5-inpainting の VAE / text encoder / scheduler | CreativeML OpenRAIL-M |
+| `models/sd15-inpaint/` | SD1.5-inpainting の VAE / text encoder / tokenizer / 設定 (UNet の重みは不要) | CreativeML OpenRAIL-M |
 
-```bash
-curl -fL -o models/big-lama.pt \
-  https://github.com/enesmsahin/simple-lama-inpainting/releases/download/v0.1.0/big-lama.pt
-```
-
-YOEO と SD1.5-inpainting の取得手順は `docs/DESIGN_V2_JA.md` §7 を参照。
 
 ## 構成
 
@@ -76,14 +84,14 @@ nagi_inpaint2/     製品経路。api -> pipeline -> removers -> lama / stage_d
   paths.py           重みの場所を作業ディレクトリに依存させず解決する
 eval/              評価基盤。盲検A/B と実測結果 (RESULTS.md)
 data/              ベンチの作成 (実在の人物を検出して切り出す)
-tests/             53 件。モデルを読まないので数秒で回る
+tests/             58 件。モデルを読まないので数秒で回る
 docs/              設計と、撤回した主張の記録
 ```
 
 ## 開発
 
 ```bash
-pixi run python -m pytest tests/ -q          # 53 件 / 約 7 秒
+pixi run python -m pytest tests/ -q          # 58 件
 pixi run python eval/verify_100mp.py         # 1 億画素での通し確認
 ```
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nagi-inpaint2"
-version = "0.1.1"
+version = "0.2.0"
 description = "Non-parametric-first inpainting for 100-megapixel linear HDR, trainable on an M1."
 requires-python = ">=3.11,<3.13"
 dependencies = [
@@ -55,11 +55,12 @@ torchvision = "*"
 opencv-python-headless = "*"   # MobileSAM の SamAutomaticMaskGenerator が cv2 を使う
 
 # --- 既存の除去モデル (v2 Phase 0) ------------------------------------------
-# transformers は **5 未満に固定する**。無制限だと 5.x に上がり、
-# diffusers 0.40 が前提としていない API (CLIPTextModel 周り) で壊れる恐れがある。
+# transformers は **6 未満**。初版は「5.x で壊れる恐れがある」として 5 未満に固定していたが、
+# 実測の裏付けが無かった。ShadeWave の環境 (transformers 5.15 / huggingface_hub 1.22) で
+# 動かし、**出力がこの環境 (4.57) とビット単位で一致する**ことを確認した (2026-10-26)。
 # torch 2.12 のピンは維持されることを pixi の solve で確認済み (docs/DESIGN_V2_JA.md §13.5)。
 diffusers = ">=0.35,<0.41"
-transformers = ">=4.44,<5"
+transformers = ">=4.44,<6"
 accelerate = "*"
 huggingface_hub = "*"
 
